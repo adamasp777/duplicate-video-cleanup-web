@@ -144,7 +144,7 @@ router.get('/scan/:id', (req, res) => {
  * Move duplicate files to cleanup folder
  */
 router.post('/move', async (req, res) => {
-  const { scanId, cleanupPath } = req.body;
+  const { scanId, cleanupPath, selectedFiles } = req.body;
   const broadcast = req.app.get('broadcast');
   
   if (!scanId || !cleanupPath) {
@@ -156,9 +156,19 @@ router.post('/move', async (req, res) => {
     return res.status(400).json({ error: 'Invalid scan or no results available' });
   }
   
-  const filesToMove = scan.results.filesToMove;
+  let filesToMove = scan.results.filesToMove;
   if (!filesToMove || filesToMove.length === 0) {
     return res.status(400).json({ error: 'No files to move' });
+  }
+  
+  // If selectedFiles provided, filter to only those files
+  if (selectedFiles && Array.isArray(selectedFiles) && selectedFiles.length > 0) {
+    const selectedSet = new Set(selectedFiles);
+    filesToMove = filesToMove.filter(f => selectedSet.has(f.sourcePath));
+    
+    if (filesToMove.length === 0) {
+      return res.status(400).json({ error: 'No matching files found to move' });
+    }
   }
   
   // Ensure cleanup directory exists

@@ -51,9 +51,6 @@ const styles = {
     color: '#fff',
     fontSize: '14px',
   },
-  checkbox: {
-    marginRight: '8px',
-  },
   checkboxLabel: {
     display: 'flex',
     alignItems: 'center',
@@ -144,16 +141,34 @@ const styles = {
     color: '#ccc',
     borderBottom: '2px solid #1a1a2e',
   },
+  thCheckbox: {
+    background: '#0f3460',
+    padding: '12px',
+    textAlign: 'center',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#ccc',
+    borderBottom: '2px solid #1a1a2e',
+    width: '60px',
+  },
   td: {
     padding: '10px 12px',
     borderBottom: '1px solid #0f3460',
     fontSize: '13px',
+  },
+  tdCheckbox: {
+    padding: '10px 12px',
+    borderBottom: '1px solid #0f3460',
+    textAlign: 'center',
   },
   keepRow: {
     background: 'rgba(46, 204, 113, 0.1)',
   },
   moveRow: {
     background: 'rgba(233, 69, 96, 0.1)',
+  },
+  selectedRow: {
+    background: 'rgba(233, 69, 96, 0.25)',
   },
   statusBadge: {
     padding: '4px 10px',
@@ -204,6 +219,21 @@ const styles = {
     border: '1px solid #e94560',
     color: '#e94560',
   },
+  selectionBar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '15px',
+    marginTop: '15px',
+    padding: '10px 15px',
+    background: '#0f3460',
+    borderRadius: '8px',
+  },
+  checkbox: {
+    width: '18px',
+    height: '18px',
+    cursor: 'pointer',
+    accentColor: '#e94560',
+  },
 };
 
 function App() {
@@ -219,6 +249,7 @@ function App() {
   const [results, setResults] = useState(null);
   const [logs, setLogs] = useState([]);
   const [alert, setAlert] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState(new Set());
   
   const wsRef = useRef(null);
   const logRef = useRef(null);
@@ -291,6 +322,10 @@ function App() {
         setResults(data.results);
         setOperation('');
         setProgress({ current: 0, total: 0, percentage: 0 });
+        // Auto-select all files to move by default
+        if (data.results?.filesToMove) {
+          setSelectedFiles(new Set(data.results.filesToMove.map(f => f.sourcePath)));
+        }
         addLog(`Scan complete! Found ${data.results.summary?.duplicateGroupCount || 0} duplicate groups`);
         if (data.results.summary?.duplicateGroupCount === 0) {
           setAlert({ type: 'success', message: 'No duplicate videos found!' });
@@ -316,6 +351,7 @@ function App() {
         setOperation('');
         setProgress({ current: 0, total: 0, percentage: 0 });
         setResults(null);
+        setSelectedFiles(new Set());
         addLog(`Move complete! Moved ${data.results.successCount} files (${data.results.totalGBMoved} GB)`);
         setAlert({ 
           type: 'success', 
@@ -335,6 +371,7 @@ function App() {
     setAlert(null);
     setIsScanning(true);
     setResults(null);
+    setSelectedFiles(new Set());
     setLogs([]);
     addLog(`Starting scan: ${sourcePath}`);
     
@@ -369,15 +406,24 @@ function App() {
       return;
     }
     
+    if (selectedFiles.size === 0) {
+      setAlert({ type: 'error', message: 'Please select at least one file to move' });
+      return;
+    }
+    
     setAlert(null);
     setIsMoving(true);
-    addLog(`Moving duplicates to: ${cleanupPath}`);
+    addLog(`Moving ${selectedFiles.size} selected files to: ${cleanupPath}`);
     
     try {
       const response = await fetch('/api/move', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scanId, cleanupPath })
+        body: JSON.stringify({ 
+          scanId, 
+          cleanupPath,
+          selectedFiles: Array.from(selectedFiles)
+        })
       });
       
       const data = await response.json();
@@ -394,6 +440,31 @@ function App() {
     }
   };
 
+  // Toggle file selection
+  const toggleFileSelection = (filePath) => {
+    setSelectedFiles(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(filePath)) {
+        newSet.delete(filePath);
+      } else {
+        newSet.add(filePath);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all files
+  const selectAll = () => {
+    if (results?.filesToMove) {
+      setSelectedFiles(new Set(results.filesToMove.map(f => f.sourcePath)));
+    }
+  };
+
+  // Deselect all files
+  const deselectAll = () => {
+    setSelectedFiles(new Set());
+  };
+
   // Build display data from results
   const getDisplayData = () => {
     if (!results?.duplicateGroups) return [];
@@ -406,6 +477,7 @@ function App() {
         status: 'KEEP',
         fileName: group.largestFile.fileName,
         path: group.largestFile.directory,
+        filePath: group.largestFile.filePath,
         sizeMB: group.largestFile.sizeMB,
         duration: group.duration,
         resolution: group.resolution,
@@ -419,6 +491,7 @@ function App() {
           status: 'MOVE',
           fileName: file.fileName,
           path: file.directory,
+          filePath: file.filePath,
           sizeMB: file.sizeMB,
           duration: group.duration,
           resolution: group.resolution,
@@ -431,7 +504,8 @@ function App() {
   };
 
   const displayData = getDisplayData();
-  const canMove = results?.summary?.totalFilesToMove > 0 && !isScanning && !isMoving;
+  const canMove = selectedFiles.size > 0 && !isScanning && !isMoving;
+  const totalFilesToMove = results?.filesToMove?.length || 0;
 
   return (
     <div style={styles.container}>
@@ -477,7 +551,7 @@ function App() {
         <label style={styles.checkboxLabel}>
           <input
             type="checkbox"
-            style={styles.checkbox}
+            style={{ ...styles.checkbox, marginRight: '8px' }}
             checked={recurse}
             onChange={(e) => setRecurse(e.target.checked)}
             disabled={isScanning || isMoving}
@@ -507,7 +581,7 @@ function App() {
             onClick={handleMove}
             disabled={!canMove}
           >
-            {isMoving ? '⏳ Moving...' : '📦 Move Duplicates'}
+            {isMoving ? '⏳ Moving...' : `📦 Move Selected (${selectedFiles.size})`}
           </button>
         </div>
       </section>
@@ -550,51 +624,95 @@ function App() {
               <div style={styles.summaryLabel}>Duplicate Groups</div>
             </div>
             <div style={styles.summaryCard}>
-              <div style={styles.summaryValue}>{results.summary.totalFilesToMove}</div>
-              <div style={styles.summaryLabel}>Files to Move</div>
+              <div style={styles.summaryValue}>{selectedFiles.size} / {totalFilesToMove}</div>
+              <div style={styles.summaryLabel}>Files Selected</div>
             </div>
             <div style={styles.summaryCard}>
               <div style={styles.summaryValue}>{results.summary.spaceToSaveGB} GB</div>
-              <div style={styles.summaryLabel}>Space to Save</div>
+              <div style={styles.summaryLabel}>Max Space to Save</div>
             </div>
           </div>
 
           {displayData.length > 0 && (
-            <div style={styles.tableContainer}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>Group</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={styles.th}>File Name</th>
-                    <th style={styles.th}>Path</th>
-                    <th style={styles.th}>Size (MB)</th>
-                    <th style={styles.th}>Duration</th>
-                    <th style={styles.th}>Resolution</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayData.map((row, idx) => (
-                    <tr key={idx} style={row.status === 'KEEP' ? styles.keepRow : styles.moveRow}>
-                      <td style={styles.td}>{row.group}</td>
-                      <td style={styles.td}>
-                        <span style={{
-                          ...styles.statusBadge,
-                          ...(row.status === 'KEEP' ? styles.keepBadge : styles.moveBadge)
-                        }}>
-                          {row.status}
-                        </span>
-                      </td>
-                      <td style={styles.td}>{row.fileName}</td>
-                      <td style={styles.td}>{row.path}</td>
-                      <td style={styles.td}>{row.sizeMB}</td>
-                      <td style={styles.td}>{row.duration}s</td>
-                      <td style={styles.td}>{row.resolution}</td>
+            <>
+              <div style={styles.selectionBar}>
+                <button
+                  style={{ ...styles.button, ...styles.primaryButton, padding: '8px 16px', fontSize: '12px' }}
+                  onClick={selectAll}
+                  disabled={isScanning || isMoving}
+                >
+                  ✓ Select All
+                </button>
+                <button
+                  style={{ ...styles.button, ...styles.secondaryButton, padding: '8px 16px', fontSize: '12px' }}
+                  onClick={deselectAll}
+                  disabled={isScanning || isMoving}
+                >
+                  ✗ Deselect All
+                </button>
+                <span style={{ color: '#888', fontSize: '13px' }}>
+                  {selectedFiles.size} of {totalFilesToMove} files selected for removal
+                </span>
+              </div>
+              
+              <div style={styles.tableContainer}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.thCheckbox}>Select</th>
+                      <th style={styles.th}>Group</th>
+                      <th style={styles.th}>Status</th>
+                      <th style={styles.th}>File Name</th>
+                      <th style={styles.th}>Path</th>
+                      <th style={styles.th}>Size (MB)</th>
+                      <th style={styles.th}>Duration</th>
+                      <th style={styles.th}>Resolution</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {displayData.map((row, idx) => {
+                      const isSelected = selectedFiles.has(row.filePath);
+                      let rowStyle = row.status === 'KEEP' ? styles.keepRow : styles.moveRow;
+                      if (row.status === 'MOVE' && isSelected) {
+                        rowStyle = styles.selectedRow;
+                      }
+                      
+                      return (
+                        <tr key={idx} style={rowStyle}>
+                          <td style={styles.tdCheckbox}>
+                            {row.status === 'MOVE' ? (
+                              <input
+                                type="checkbox"
+                                style={styles.checkbox}
+                                checked={isSelected}
+                                onChange={() => toggleFileSelection(row.filePath)}
+                                disabled={isScanning || isMoving}
+                              />
+                            ) : (
+                              <span style={{ color: '#2ecc71', fontSize: '16px' }}>✓</span>
+                            )}
+                          </td>
+                          <td style={styles.td}>{row.group}</td>
+                          <td style={styles.td}>
+                            <span style={{
+                              ...styles.statusBadge,
+                              ...(row.status === 'KEEP' ? styles.keepBadge : styles.moveBadge)
+                            }}>
+                              {row.status}
+                            </span>
+                          </td>
+                          <td style={styles.td}>{row.fileName}</td>
+                          <td style={styles.td}>{row.path}</td>
+                          <td style={styles.td}>{row.sizeMB}</td>
+                          <td style={styles.td}>{row.duration}s</td>
+                          <td style={styles.td}>{row.resolution}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
       )}
