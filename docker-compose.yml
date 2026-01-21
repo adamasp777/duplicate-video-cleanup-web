@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  duplicate-video-cleanup:
+    build: .
+    image: duplicate-video-cleanup:latest
+    container_name: duplicate-video-cleanup
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount your media folders here
+      # Format: /path/on/host:/path/in/container
+      - /mnt/user/media:/media:ro          # Source videos (read-only recommended)
+      - /mnt/user/duplicates:/cleanup      # Where duplicates will be moved
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - TZ=America/New_York
+    # For Unraid, you may want to set specific user/group IDs
+    # user: "99:100"  # Uncomment and adjust for Unraid nobody:users

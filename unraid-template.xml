@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>DuplicateVideoCleanup</Name>
+  <Repository>duplicate-video-cleanup:latest</Repository>
+  <Registry>local</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project/>
+  <Overview>
+    Web-based utility to find and clean up duplicate video files based on duration and resolution.
+    Features real-time progress tracking, detailed file information, and configurable source/cleanup paths.
+  </Overview>
+  <Category>MediaApp:Video Tools:</Category>
+  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/fileflows.svg</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled></DateInstalled>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  
+  <Config Name="Web UI Port" Target="3000" Default="3000" Mode="tcp" Description="Web interface port" Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  
+  <Config Name="Media Path" Target="/media" Default="/mnt/user/media" Mode="ro" Description="Path to your video files (read-only)" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/media</Config>
+  
+  <Config Name="Cleanup Path" Target="/cleanup" Default="/mnt/user/duplicates" Mode="rw" Description="Path where duplicate videos will be moved" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/duplicates</Config>
+  
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User ID for file permissions" Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group ID for file permissions" Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+  
+  <Config Name="Timezone" Target="TZ" Default="America/New_York" Mode="" Description="Timezone" Type="Variable" Display="advanced" Required="false" Mask="false">America/New_York</Config>
+</Container>
