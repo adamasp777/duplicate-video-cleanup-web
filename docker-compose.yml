@@ -11,7 +11,7 @@ services:
     volumes:
       # Mount your media folders here
       # Format: /path/on/host:/path/in/container
-      - /mnt/user/media:/media:ro          # Source videos (read-only recommended)
+      - /mnt/user/media:/media              # Source videos (read-write to allow moves)
       - /mnt/user/duplicates:/cleanup      # Where duplicates will be moved
     environment:
       - NODE_ENV=production

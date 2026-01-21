@@ -75,6 +75,7 @@ async function moveFile(sourcePath, baseDirectory, destinationRoot) {
     
     // Move the file
     await fs.promises.rename(sourcePath, destPath);
+    console.log(`Successfully moved: ${sourcePath} -> ${destPath}`);
     
     return {
       success: true,
@@ -102,6 +103,7 @@ async function moveFile(sourcePath, baseDirectory, destinationRoot) {
         
         await fs.promises.copyFile(sourcePath, destPath);
         await fs.promises.unlink(sourcePath);
+        console.log(`Successfully moved (copy+delete): ${sourcePath} -> ${destPath}`);
         
         return {
           success: true,
@@ -109,6 +111,7 @@ async function moveFile(sourcePath, baseDirectory, destinationRoot) {
           destinationPath: destPath
         };
       } catch (copyErr) {
+        console.error(`Failed to move file: ${sourcePath} - ${copyErr.message}`);
         return {
           success: false,
           sourcePath,
@@ -117,6 +120,7 @@ async function moveFile(sourcePath, baseDirectory, destinationRoot) {
       }
     }
     
+    console.error(`Failed to move file: ${sourcePath} - ${err.message}`);
     return {
       success: false,
       sourcePath,
