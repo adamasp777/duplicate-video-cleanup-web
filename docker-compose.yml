@@ -18,4 +18,4 @@ services:
       - PORT=3000
       - TZ=America/New_York
     # For Unraid, you may want to set specific user/group IDs
-    # user: "99:100"  # Uncomment and adjust for Unraid nobody:users
+    user: "99:100"  # Unraid nobody:users

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Search } from 'lucide-react';
 
 const styles = {
   container: {
@@ -569,7 +570,11 @@ function App() {
             onClick={handleScan}
             disabled={isScanning || isMoving}
           >
-            {isScanning ? '⏳ Scanning...' : '🔍 Scan for Duplicates'}
+            {isScanning ? '⏳ Scanning...' : (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Search size={18} /> Scan for Duplicates
+              </span>
+            )}
           </button>
           
           <button
